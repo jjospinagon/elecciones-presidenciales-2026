@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0b1b3a">
+<title>Elecciones Presidenciales Colombia 2026 — Preconteo</title>
+<style>
+  :root{
+    --bg:#0b1b3a; --bg2:#11264f; --card:#16294f; --line:#26406f;
+    --txt:#eef3ff; --mut:#9fb2d8; --acc:#ffc53d; --ok:#39d98a; --bad:#ff6b6b;
+    --bar:#3a6df0;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:linear-gradient(180deg,var(--bg),#091533);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:16px;line-height:1.4;-webkit-text-size-adjust:100%}
+  .wrap{max-width:680px;margin:0 auto;padding:14px 14px 40px;padding-top:max(14px,env(safe-area-inset-top))}
+  header{text-align:center;margin-bottom:12px}
+  header h1{font-size:1.15rem;margin:0 0 2px}
+  header .sub{color:var(--mut);font-size:.78rem}
+
+  .banner{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:14px;margin-bottom:12px;text-align:center}
+  .banner.open{border-color:var(--ok)}
+  .banner .lbl{color:var(--mut);font-size:.78rem;text-transform:uppercase;letter-spacing:.5px}
+  .clock{font-size:2rem;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:1px;margin:4px 0}
+  .clock small{font-size:.85rem;color:var(--mut);font-weight:500}
+  .pill{display:inline-block;font-size:.72rem;padding:3px 10px;border-radius:999px;
+    background:#23467f;color:#cfe0ff;margin-top:4px}
+  .pill.live{background:#1c5b3b;color:#9cf3c6}
+  .pill.live::before{content:"●";color:var(--ok);margin-right:5px;animation:bl 1.2s infinite}
+  @keyframes bl{50%{opacity:.25}}
+
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  select{flex:1 1 46%;min-width:0;background:var(--bg2);color:var(--txt);
+    border:1px solid var(--line);border-radius:10px;padding:11px 10px;font-size:.92rem;
+    appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath fill='%239fb2d8' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 12px center;padding-right:30px}
+  .refresh-row{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+  button#refrescar{flex:1;background:var(--acc);color:#1a1300;border:none;border-radius:10px;
+    padding:12px;font-size:.95rem;font-weight:700;cursor:pointer}
+  button#refrescar:active{transform:scale(.98)}
+  button#refrescar:disabled{opacity:.6}
+  .auto{font-size:.72rem;color:var(--mut);white-space:nowrap;text-align:right;min-width:96px}
+  .auto b{color:var(--txt);font-variant-numeric:tabular-nums}
+  .auto label{display:flex;gap:4px;align-items:center;justify-content:flex-end;cursor:pointer}
+
+  .scope{font-size:.95rem;font-weight:600;margin:2px 0 8px;color:#cfe0ff}
+  .scope span{color:var(--acc)}
+
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 8px;text-align:center}
+  .stat .v{font-size:1.05rem;font-weight:700;font-variant-numeric:tabular-nums}
+  .stat .k{font-size:.66rem;color:var(--mut);text-transform:uppercase;letter-spacing:.3px;margin-top:2px}
+  .prog{height:8px;background:#0c1d3d;border-radius:999px;overflow:hidden;margin:0 0 16px;border:1px solid var(--line)}
+  .prog > i{display:block;height:100%;background:linear-gradient(90deg,#39d98a,#3a6df0);width:0;transition:width .6s}
+
+  .cand{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:9px}
+  .cand .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .cand .nm{font-weight:700;font-size:.95rem}
+  .cand .vi{font-size:.72rem;color:var(--mut);font-weight:400}
+  .cand .pc{font-size:1.05rem;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .cand .vt{font-size:.72rem;color:var(--mut);text-align:right;font-variant-numeric:tabular-nums}
+  .cand .track{height:9px;background:#0c1d3d;border-radius:999px;overflow:hidden;margin-top:7px}
+  .cand .track > i{display:block;height:100%;border-radius:999px;width:0;transition:width .7s}
+  .cand.lead{border-color:var(--acc)}
+  .cand.lead .nm::after{content:" ★";color:var(--acc)}
+
+  .msg{text-align:center;color:var(--mut);font-size:.85rem;padding:24px 8px}
+  .foot{text-align:center;color:var(--mut);font-size:.7rem;margin-top:18px;line-height:1.6}
+  .foot a{color:var(--mut)}
+  .err{color:var(--bad)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Presidencial Colombia 2026</h1>
+    <div class="sub">Preconteo oficial · 1.ª vuelta · 31 de mayo</div>
+  </header>
+
+  <div id="banner" class="banner">
+    <div class="lbl" id="bannerLbl">Resultados disponibles en</div>
+    <div class="clock" id="clock">--:--:--</div>
+    <div class="pill" id="statePill">Esperando apertura</div>
+  </div>
+
+  <div class="controls">
+    <select id="selDep"><option value="00">🇨🇴 Toda Colombia</option></select>
+    <select id="selMun" disabled><option value="">— Todo el departamento —</option></select>
+  </div>
+
+  <div class="refresh-row">
+    <button id="refrescar">Actualizar resultados</button>
+    <div class="auto">
+      <label><input type="checkbox" id="autoChk" checked> Auto</label>
+      <div>en <b id="autoCount">5:00</b></div>
+    </div>
+  </div>
+
+  <div class="scope" id="scopeName"></div>
+
+  <div class="stats" id="stats" style="display:none">
+    <div class="stat"><div class="v" id="sMesas">—</div><div class="k">Mesas inf.</div></div>
+    <div class="stat"><div class="v" id="sVot">—</div><div class="k">Votantes</div></div>
+    <div class="stat"><div class="v" id="sAbs">—</div><div class="k">Abstención</div></div>
+  </div>
+  <div class="prog" id="progWrap" style="display:none"><i id="progBar"></i></div>
+
+  <div id="cands"></div>
+  <div id="msg" class="msg">Cargando datos…</div>
+
+  <div class="foot">
+    Fuente: <a id="srcLink" href="https://resultados.registraduria.gov.co/" target="_blank" rel="noopener">Registraduría Nacional del Estado Civil</a>.
+    Datos de preconteo: informativos, sin valor jurídico.<br>
+    Última actualización: <span id="lastUpd">—</span>
+  </div>
+</div>
+
+<script>
+/* ====================== CONFIGURA AQUÍ ====================== */
+/* Proxy: Cloudflare Worker (pasa el WAF de la Registraduría y añade CORS) */
+const PROXY_URL = "https://falling-sunset-c168.jjospinagon.workers.dev";
+
+const AUTO_SEG  = 300;                       // auto-refresco: 300s = 5 min
+const OPEN_TIME = new Date("2026-05-31T16:00:00-05:00"); // apertura resultados
+/* =========================================================== */
+
+const PALETA = ["#3a6df0","#e6492d","#39d98a","#ffc53d","#a162f7","#22b8cf",
+                "#ff8f3f","#f06595","#74c0fc","#94d82d","#c92a2a","#5c7cfa","#868e96"];
+
+const $ = id => document.getElementById(id);
+const fmt = n => (isNaN(n)?"—":Number(n).toLocaleString("es-CO"));
+const api = (t,c) => fetch(`${PROXY_URL}?t=${t}${c?("&c="+encodeURIComponent(c)):""}`)
+                      .then(r=>r.json());
+
+let NOM=null, DEPS=[], MUNS={}, autoLeft=AUTO_SEG, autoTimer=null, isOpen=false;
+
+/* ---------- Cuenta regresiva a la apertura (16:00) ---------- */
+function tickClock(){
+  const now=new Date(), diff=OPEN_TIME-now;
+  if(diff>0 && !isOpen){
+    const h=Math.floor(diff/3.6e6), m=Math.floor(diff%3.6e6/6e4), s=Math.floor(diff%6e4/1e3);
+    $("clock").innerHTML = String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
+    $("bannerLbl").textContent="Resultados disponibles en";
+    $("statePill").textContent="Apertura 31 may · 4:00 p. m.";
+  }else{
+    $("bannerLbl").textContent= isOpen ? "Conteo en tiempo real" : "Hora de apertura cumplida";
+    const t=new Date();
+    $("clock").innerHTML = t.toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit",second:"2-digit"})+
+      ' <small>hora local</small>';
+  }
+}
+setInterval(tickClock,1000); tickClock();
+
+/* ---------- Construye nomenclátor (departamentos/municipios) ---------- */
+async function cargarNomenclator(){
+  try{
+    NOM = await api("nom");
+    const eleccion = NOM.amb.find(a=>a.elec===1);
+    const ambitos = eleccion.ambitos;
+    const byIdx={}; ambitos.forEach(a=>byIdx[a.i]=a);
+    const colombia = ambitos.find(a=>a.l===1);
+    const depIdx = (colombia.h.find(h=>h.l===2)||{p:[]}).p;
+    DEPS = depIdx.map(i=>byIdx[i]).sort((a,b)=>a.n.localeCompare(b.n,"es"));
+    DEPS.forEach(d=>{
+      const munIdx=(d.h.find(h=>h.l===3)||{p:[]}).p;
+      MUNS[d.co]=munIdx.map(i=>byIdx[i]).sort((a,b)=>a.n.localeCompare(b.n,"es"));
+    });
+    const sel=$("selDep");
+    DEPS.forEach(d=> sel.add(new Option(titulo(d.n)+(MUNS[d.co]?` (${MUNS[d.co].length})`:""), d.co)));
+  }catch(e){ /* si falla, sigue funcionando solo a nivel nacional */ }
+}
+
+$("selDep").addEventListener("change",function(){
+  const dep=this.value, sm=$("selMun");
+  sm.innerHTML='<option value="">— Todo el departamento —</option>';
+  if(dep!=="00" && MUNS[dep] && MUNS[dep].length){
+    MUNS[dep].forEach(m=> sm.add(new Option(titulo(m.n), m.co)));
+    sm.disabled=false;
+  }else sm.disabled=true;
+  cargarResultados();
+});
+$("selMun").addEventListener("change",cargarResultados);
+$("refrescar").addEventListener("click",()=>cargarResultados(true));
+$("autoChk").addEventListener("change",function(){ if(this.checked) autoLeft=AUTO_SEG; });
+
+const titulo = s => (s||"").toLowerCase().replace(/(^|[\s.\-])(\p{L})/gu,(m,p,l)=>p+l.toUpperCase());
+
+/* ---------- Estado / config oficial ---------- */
+async function chequearConfig(){
+  try{
+    const cfg=await api("cfg");
+    isOpen = !!cfg.isOpen;
+    const pill=$("statePill");
+    if(isOpen){ pill.className="pill live"; pill.textContent="En vivo"; $("banner").classList.add("open"); }
+  }catch(e){}
+}
+
+/* ---------- Carga y pinta resultados del ámbito elegido ---------- */
+async function cargarResultados(manual){
+  const dep=$("selDep").value, mun=$("selMun").value;
+  const code = mun || dep || "00";
+  const nombre = mun ? titulo($("selMun").selectedOptions[0].text)+", "+titulo($("selDep").selectedOptions[0].text.replace(/\s\(\d+\)$/,''))
+              : dep!=="00" ? titulo($("selDep").selectedOptions[0].text.replace(/\s\(\d+\)$/,'')) : "Toda Colombia";
+  $("scopeName").innerHTML = "Mostrando: <span>"+nombre+"</span>";
+  if(manual){ $("refrescar").disabled=true; $("refrescar").textContent="Actualizando…"; }
+
+  try{
+    const j = await api("res", code);
+    if(j.error){ throw new Error(j.error); }
+    pintar(j);
+    autoLeft=AUTO_SEG;
+  }catch(e){
+    $("msg").innerHTML='<span class="err">No se pudieron cargar los datos ('+e.message+').</span><br>'+
+      (PROXY_URL.indexOf("PEGA_AQUI")>=0?'Falta configurar PROXY_URL en el archivo.':'Reintenta en unos segundos.');
+    $("msg").style.display="block"; $("stats").style.display="none"; $("progWrap").style.display="none"; $("cands").innerHTML="";
+  }finally{
+    if(manual){ $("refrescar").disabled=false; $("refrescar").textContent="Actualizar resultados"; }
+    $("lastUpd").textContent=new Date().toLocaleString("es-CO");
+  }
+}
+
+function pintar(j){
+  const T=(j.totales&&j.totales.act)||{};
+  $("stats").style.display="grid"; $("progWrap").style.display="block";
+  const pmesas = parseFloat((T.pmesesc||"0").replace("%","").replace(",","."))||0;
+  $("sMesas").textContent = (T.pmesesc||"0%");
+  $("sVot").textContent  = fmt(T.votant);
+  $("sAbs").textContent  = (T.pabsten||"—");
+  $("progBar").style.width = Math.min(100,pmesas)+"%";
+
+  // reunir candidatos
+  const cams=j.camaras||[]; let cands=[];
+  cams.forEach(cm=>(cm.partotabla||[]).forEach(pt=>{
+    const a=pt.act||{};
+    (a.cantotabla||[]).forEach(c=>{
+      cands.push({ nm:titulo((c.nomcan||"")+" "+(c.apecan||"")),
+                   vi:titulo((c.nomcan2||"")+" "+(c.apecan2||"")),
+                   vot:parseInt(c.vot||"0",10),
+                   pc:parseFloat((c.pvot||"0").replace("%","").replace(",","."))||0 });
+    });
+  }));
+  cands.sort((a,b)=>b.vot-a.vot);
+  const maxpc=Math.max(1,...cands.map(c=>c.pc));
+
+  if(!cands.length || cands.every(c=>c.vot===0)){
+    $("cands").innerHTML="";
+    $("msg").style.display="block";
+    $("msg").innerHTML = isOpen
+      ? "Mesas informadas: "+(T.pmesesc||"0%")+". Aún sin votos consolidados en este ámbito; usa Actualizar."
+      : "Los resultados se publican a partir de las 4:00 p. m. Ya puedes navegar por departamento y municipio.";
+    return;
+  }
+  $("msg").style.display="none";
+  $("cands").innerHTML = cands.map((c,i)=>{
+    const col=PALETA[i%PALETA.length];
+    return `<div class="cand ${i===0?'lead':''}">
+      <div class="top">
+        <div><div class="nm">${c.nm}</div><div class="vi">Vicepresidencia: ${c.vi||"—"}</div></div>
+        <div><div class="pc">${c.pc.toLocaleString("es-CO",{minimumFractionDigits:2,maximumFractionDigits:2})}%</div>
+             <div class="vt">${fmt(c.vot)} votos</div></div>
+      </div>
+      <div class="track"><i style="width:${(c.pc/maxpc*100).toFixed(1)}%;background:${col}"></i></div>
+    </div>`;
+  }).join("");
+}
+
+/* ---------- Auto-refresco cada 5 min ---------- */
+function tickAuto(){
+  if($("autoChk").checked){
+    autoLeft--;
+    if(autoLeft<=0){ autoLeft=AUTO_SEG; chequearConfig(); cargarResultados(); }
+  }
+  const m=Math.floor(Math.max(0,autoLeft)/60), s=Math.max(0,autoLeft)%60;
+  $("autoCount").textContent = m+":"+String(s).padStart(2,"0");
+}
+autoTimer=setInterval(tickAuto,1000);
+
+/* ---------- Arranque ---------- */
+(async function init(){
+  await chequearConfig();
+  await cargarNomenclator();
+  await cargarResultados();
+})();
+</script>
+</body>
+</html>
