@@ -66,6 +66,20 @@
   .cand .track > i{display:block;height:100%;border-radius:999px;width:0;transition:width .7s}
   .cand.lead{border-color:var(--acc)}
   .cand.lead .nm::after{content:" ★";color:var(--acc)}
+  .cand.exp{cursor:pointer}
+  .cand .hint{font-size:.7rem;color:var(--acc);margin-top:7px;display:flex;align-items:center;gap:4px;opacity:.85}
+  .cand .hint .ar{transition:transform .25s}
+  .cand.open .hint .ar{transform:rotate(180deg)}
+  .detail{display:none;margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+  .cand.open .detail{display:block}
+  .detail .dhead{font-size:.66rem;color:var(--mut);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+  .detail .drow{display:grid;grid-template-columns:34% 1fr auto;gap:8px;align-items:center;padding:3px 0;font-size:.76rem}
+  .detail .dname{color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .detail .dbar{height:7px;background:#0c1d3d;border-radius:999px;overflow:hidden}
+  .detail .dbar>i{display:block;height:100%;border-radius:999px;width:0;transition:width .5s}
+  .detail .dval{color:var(--mut);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+  .detail .note{grid-column:1/-1;display:block;color:var(--mut);text-align:center;padding:8px}
+  .detail .note.err{color:var(--bad)}
 
   .msg{text-align:center;color:var(--mut);font-size:.85rem;padding:24px 8px}
   .foot{text-align:center;color:var(--mut);font-size:.7rem;margin-top:18px;line-height:1.6}
@@ -136,6 +150,7 @@ const api = (t,c) => fetch(`${PROXY_URL}?t=${t}${c?("&c="+encodeURIComponent(c))
                       .then(r=>r.json());
 
 let NOM=null, DEPS=[], MUNS={}, autoLeft=AUTO_SEG, autoTimer=null, isOpen=false;
+let CURRENT={dep:"00",mun:""}, SCOPECACHE={};
 
 /* ---------- Cuenta regresiva a la apertura (16:00) ---------- */
 function tickClock(){
@@ -202,6 +217,7 @@ async function chequearConfig(){
 async function cargarResultados(manual){
   const dep=$("selDep").value, mun=$("selMun").value;
   const code = mun || dep || "00";
+  CURRENT={dep,mun}; SCOPECACHE={};
   const nombre = mun ? titulo($("selMun").selectedOptions[0].text)+", "+titulo($("selDep").selectedOptions[0].text.replace(/\s\(\d+\)$/,''))
               : dep!=="00" ? titulo($("selDep").selectedOptions[0].text.replace(/\s\(\d+\)$/,'')) : "Toda Colombia";
   $("scopeName").innerHTML = "Mostrando: <span>"+nombre+"</span>";
@@ -236,7 +252,8 @@ function pintar(j){
   cams.forEach(cm=>(cm.partotabla||[]).forEach(pt=>{
     const a=pt.act||{};
     (a.cantotabla||[]).forEach(c=>{
-      cands.push({ nm:titulo((c.nomcan||"")+" "+(c.apecan||"")),
+      cands.push({ codcan:String(c.codcan||""),
+                   nm:titulo((c.nomcan||"")+" "+(c.apecan||"")),
                    vi:titulo((c.nomcan2||"")+" "+(c.apecan2||"")),
                    vot:parseInt(c.vot||"0",10),
                    pc:parseFloat((c.pvot||"0").replace("%","").replace(",","."))||0 });
@@ -260,18 +277,67 @@ function pintar(j){
   } else {
     $("msg").style.display="none";
   }
+  const expandable = !CURRENT.mun;
+  const childLabel = CURRENT.dep==="00" ? "departamento" : "municipio";
   $("cands").innerHTML = cands.map((c,i)=>{
     const col=PALETA[i%PALETA.length];
-    return `<div class="cand ${(i===0&&!allZero)?'lead':''}">
+    return `<div class="cand ${(i===0&&!allZero)?'lead':''} ${expandable?'exp':''}" data-codcan="${c.codcan}" data-color="${col}">
       <div class="top">
         <div><div class="nm">${c.nm}</div><div class="vi">Vicepresidencia: ${c.vi||"—"}</div></div>
         <div><div class="pc">${c.pc.toLocaleString("es-CO",{minimumFractionDigits:2,maximumFractionDigits:2})}%</div>
              <div class="vt">${fmt(c.vot)} votos</div></div>
       </div>
       <div class="track"><i style="width:${(c.pc/maxpc*100).toFixed(1)}%;background:${col}"></i></div>
+      ${expandable?`<div class="hint">Ver votos por ${childLabel} <span class="ar">▾</span></div><div class="detail"></div>`:""}
     </div>`;
   }).join("");
 }
+
+/* ---------- Desglose por sub-ámbito al tocar un candidato ---------- */
+function childrenOf(){
+  if(CURRENT.mun) return null;                       // municipio = nivel final
+  if(CURRENT.dep==="00") return DEPS.map(d=>({code:d.co,name:titulo(d.n)}));
+  return (MUNS[CURRENT.dep]||[]).map(m=>({code:m.co,name:titulo(m.n)}));
+}
+async function fetchScope(code){
+  if(SCOPECACHE[code]) return SCOPECACHE[code];
+  const j = await api("res", code);
+  SCOPECACHE[code]=j; return j;
+}
+function voteOf(j, codcan){
+  let vot=0, pc=0;
+  (j&&j.camaras||[]).forEach(cm=>(cm.partotabla||[]).forEach(pt=>{
+    ((pt.act&&pt.act.cantotabla)||[]).forEach(c=>{
+      if(String(c.codcan)===String(codcan)){ vot=parseInt(c.vot||"0",10); pc=parseFloat((c.pvot||"0").replace("%","").replace(",","."))||0; }
+    });
+  }));
+  return {vot,pc};
+}
+$("cands").addEventListener("click", async function(e){
+  if(e.target.closest(".detail")) return;   // clic dentro del panel: no cerrar
+  const card=e.target.closest(".cand.exp"); if(!card) return;
+  const det=card.querySelector(".detail");
+  const opening=card.classList.toggle("open");
+  if(!opening || det.dataset.loaded==="1") return;
+  const kids=childrenOf();
+  if(!kids||!kids.length){ det.innerHTML='<div class="note">Sin desglose disponible.</div>'; det.dataset.loaded="1"; return; }
+  det.innerHTML='<div class="note">Cargando desglose…</div>';
+  const codcan=card.dataset.codcan, color=card.dataset.color;
+  const lvl = CURRENT.dep==="00" ? "departamento" : "municipio";
+  try{
+    const files=await Promise.all(kids.map(k=>fetchScope(k.code).then(j=>({k,j})).catch(()=>({k,j:null}))));
+    let rows=files.map(({k,j})=>{ const v=voteOf(j,codcan); return {name:k.name, vot:v.vot, pc:v.pc}; });
+    rows.sort((a,b)=>b.vot-a.vot);
+    const maxv=Math.max(1,...rows.map(r=>r.vot));
+    det.innerHTML='<div class="dhead">Votos por '+lvl+'</div>'+rows.map(r=>`
+      <div class="drow">
+        <div class="dname">${r.name}</div>
+        <div class="dbar"><i style="width:${(r.vot/maxv*100).toFixed(1)}%;background:${color}"></i></div>
+        <div class="dval">${fmt(r.vot)} · ${r.pc.toLocaleString("es-CO",{minimumFractionDigits:2,maximumFractionDigits:2})}%</div>
+      </div>`).join("");
+    det.dataset.loaded="1";
+  }catch(err){ det.innerHTML='<div class="note err">No se pudo cargar el desglose.</div>'; }
+});
 
 /* ---------- Auto-refresco cada 5 min ---------- */
 function tickAuto(){
