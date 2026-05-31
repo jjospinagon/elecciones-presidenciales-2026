@@ -245,18 +245,24 @@ function pintar(j){
   cands.sort((a,b)=>b.vot-a.vot);
   const maxpc=Math.max(1,...cands.map(c=>c.pc));
 
-  if(!cands.length || cands.every(c=>c.vot===0)){
+  if(!cands.length){
     $("cands").innerHTML="";
+    $("msg").style.display="block";
+    $("msg").textContent="Sin datos disponibles para este ámbito.";
+    return;
+  }
+  const allZero = cands.every(c=>c.vot===0);
+  if(allZero){
     $("msg").style.display="block";
     $("msg").innerHTML = isOpen
       ? "Mesas informadas: "+(T.pmesesc||"0%")+". Aún sin votos consolidados en este ámbito; usa Actualizar."
-      : "Los resultados se publican a partir de las 4:00 p. m. Ya puedes navegar por departamento y municipio.";
-    return;
+      : "Aún no abre el preconteo (4:00 p. m.). Estos son los candidatos; los votos y % aparecerán aquí en vivo.";
+  } else {
+    $("msg").style.display="none";
   }
-  $("msg").style.display="none";
   $("cands").innerHTML = cands.map((c,i)=>{
     const col=PALETA[i%PALETA.length];
-    return `<div class="cand ${i===0?'lead':''}">
+    return `<div class="cand ${(i===0&&!allZero)?'lead':''}">
       <div class="top">
         <div><div class="nm">${c.nm}</div><div class="vi">Vicepresidencia: ${c.vi||"—"}</div></div>
         <div><div class="pc">${c.pc.toLocaleString("es-CO",{minimumFractionDigits:2,maximumFractionDigits:2})}%</div>
