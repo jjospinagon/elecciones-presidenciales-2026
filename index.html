@@ -81,6 +81,29 @@
   .detail .note{grid-column:1/-1;display:block;color:var(--mut);text-align:center;padding:8px}
   .detail .note.err{color:var(--bad)}
 
+  .tabs{display:flex;gap:6px;margin-bottom:12px;background:var(--bg2);padding:4px;border-radius:12px;border:1px solid var(--line)}
+  .tab{flex:1;background:transparent;color:var(--mut);border:none;border-radius:9px;padding:9px 4px;font-size:.82rem;font-weight:600;cursor:pointer}
+  .tab.active{background:var(--acc);color:#1a1300}
+  .pane{animation:fade .25s}
+  @keyframes fade{from{opacity:.4}to{opacity:1}}
+  .cmpHead{font-size:.8rem;color:#cfe0ff;font-weight:600;margin:2px 0 8px}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;font-size:.78rem}
+  .legend .lg{display:flex;align-items:center;gap:6px}
+  .legend .sw{width:14px;height:14px;border-radius:4px;flex:none}
+  #mapWrap{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px}
+  #mapWrap svg{width:100%;height:auto;display:block}
+  #mapWrap path{stroke:#0b1b3a;stroke-width:.6;cursor:pointer;transition:opacity .15s}
+  #mapWrap path:hover{opacity:.8}
+  #mapWrap path.sel{stroke:#fff;stroke-width:1.6}
+  .cmpInfo{margin-top:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:.82rem;color:var(--mut);min-height:20px}
+  .cmpInfo b{color:var(--txt)}
+  .deprow{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 12px;margin-bottom:8px}
+  .deprow .dt{display:flex;justify-content:space-between;align-items:baseline;font-size:.85rem;margin-bottom:6px}
+  .deprow .dt .nm{font-weight:700}
+  .deprow .dt .tot{color:var(--mut);font-size:.72rem;font-variant-numeric:tabular-nums}
+  .seg{display:flex;height:16px;border-radius:6px;overflow:hidden;background:#0c1d3d}
+  .seg > span{display:block;height:100%}
+  .deprow .leg2{display:flex;justify-content:space-between;font-size:.7rem;margin-top:5px;color:var(--mut);font-variant-numeric:tabular-nums}
   .msg{text-align:center;color:var(--mut);font-size:.85rem;padding:24px 8px}
   .foot{text-align:center;color:var(--mut);font-size:.7rem;margin-top:18px;line-height:1.6}
   .foot a{color:var(--mut)}
@@ -100,11 +123,6 @@
     <div class="pill" id="statePill">Esperando apertura</div>
   </div>
 
-  <div class="controls">
-    <select id="selDep"><option value="00">🇨🇴 Toda Colombia</option></select>
-    <select id="selMun" disabled><option value="">— Todo el departamento —</option></select>
-  </div>
-
   <div class="refresh-row">
     <button id="refrescar">Actualizar resultados</button>
     <div class="auto">
@@ -113,17 +131,40 @@
     </div>
   </div>
 
-  <div class="scope" id="scopeName"></div>
-
-  <div class="stats" id="stats" style="display:none">
-    <div class="stat"><div class="v" id="sMesas">—</div><div class="k">Mesas inf.</div></div>
-    <div class="stat"><div class="v" id="sVot">—</div><div class="k">Votantes</div></div>
-    <div class="stat"><div class="v" id="sAbs">—</div><div class="k">Abstención</div></div>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-tab="res">Resultados</button>
+    <button class="tab" data-tab="mapa">Mapa</button>
+    <button class="tab" data-tab="dep">Departamentos</button>
   </div>
-  <div class="prog" id="progWrap" style="display:none"><i id="progBar"></i></div>
 
-  <div id="cands"></div>
-  <div id="msg" class="msg">Cargando datos…</div>
+  <div id="tab-res" class="pane">
+    <div class="controls">
+      <select id="selDep"><option value="00">🇨🇴 Toda Colombia</option></select>
+      <select id="selMun" disabled><option value="">— Todo el departamento —</option></select>
+    </div>
+    <div class="scope" id="scopeName"></div>
+    <div class="stats" id="stats" style="display:none">
+      <div class="stat"><div class="v" id="sMesas">—</div><div class="k">Mesas inf.</div></div>
+      <div class="stat"><div class="v" id="sVot">—</div><div class="k">Votantes</div></div>
+      <div class="stat"><div class="v" id="sAbs">—</div><div class="k">Abstención</div></div>
+    </div>
+    <div class="prog" id="progWrap" style="display:none"><i id="progBar"></i></div>
+    <div id="cands"></div>
+    <div id="msg" class="msg">Cargando datos…</div>
+  </div>
+
+  <div id="tab-mapa" class="pane" hidden>
+    <div class="cmpHead" id="mapHead">Ganador por departamento entre los 2 primeros</div>
+    <div class="legend" id="cmpLegend"></div>
+    <div id="mapWrap"><div class="msg">Cargando mapa…</div></div>
+    <div class="cmpInfo" id="mapInfo">Toca un departamento para ver el detalle.</div>
+  </div>
+
+  <div id="tab-dep" class="pane" hidden>
+    <div class="cmpHead" id="depHead">Departamentos · barra = votos escrutados · color = los 2 primeros</div>
+    <div class="legend" id="cmpLegend2"></div>
+    <div id="depList"><div class="msg">Cargando…</div></div>
+  </div>
 
   <div class="foot">
     Fuente: <a id="srcLink" href="https://resultados.registraduria.gov.co/" target="_blank" rel="noopener">Registraduría Nacional del Estado Civil</a>.
@@ -198,7 +239,7 @@ $("selDep").addEventListener("change",function(){
   cargarResultados();
 });
 $("selMun").addEventListener("change",cargarResultados);
-$("refrescar").addEventListener("click",()=>cargarResultados(true));
+$("refrescar").addEventListener("click",()=>refrescarActivo(true));
 $("autoChk").addEventListener("change",function(){ if(this.checked) autoLeft=AUTO_SEG; });
 
 const titulo = s => (s||"").toLowerCase().replace(/(^|[\s.\-])(\p{L})/gu,(m,p,l)=>p+l.toUpperCase());
@@ -339,11 +380,143 @@ $("cands").addEventListener("click", async function(e){
   }catch(err){ det.innerHTML='<div class="note err">No se pudo cargar el desglose.</div>'; }
 });
 
+/* ================= Pestañas: Mapa y Departamentos (2 primeros) ================= */
+let ACTIVE="res", COMP=null, GEOPATHS=null;
+const GEO_URL="https://gist.githubusercontent.com/john-guerra/43c7656821069d00dcbc/raw/be6a6e239cd5b5b803c6e7c2ec405b793a9064dd/Colombia.geo.json";
+const norm = s => (s||"").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^A-Z ]/g," ").replace(/\s+/g," ").trim();
+
+document.getElementById("tabs").addEventListener("click", e=>{
+  const b=e.target.closest(".tab"); if(!b) return;
+  ACTIVE=b.dataset.tab;
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t===b));
+  ["res","mapa","dep"].forEach(id=>{ $("tab-"+id).hidden = (id!==ACTIVE); });
+  if(ACTIVE==="mapa") buildMapa();
+  else if(ACTIVE==="dep") buildDep();
+});
+
+function refrescarActivo(manual){
+  if(ACTIVE==="res") return cargarResultados(manual);
+  COMP=null; SCOPECACHE={};                 // recálculo con datos frescos
+  if(ACTIVE==="mapa") return buildMapa();
+  if(ACTIVE==="dep") return buildDep();
+}
+
+/* Nacional + todos los departamentos: define los 2 primeros y sus votos por depto */
+async function loadComparison(){
+  if(COMP) return COMP;
+  const nac=await fetchScope("00");
+  let cs=[];
+  (nac.camaras||[]).forEach(cm=>(cm.partotabla||[]).forEach(pt=>((pt.act&&pt.act.cantotabla)||[]).forEach(c=>{
+    cs.push({codcan:String(c.codcan), nm:titulo((c.nomcan||"")+" "+(c.apecan||"")), ape:titulo(c.apecan||"").split(" ")[0], vot:parseInt(c.vot||"0",10)});
+  })));
+  cs.sort((a,b)=>b.vot-a.vot);
+  const A=cs[0]||{codcan:"",nm:"—",ape:"A"}, B=cs[1]||{codcan:"",nm:"—",ape:"B"};
+  A.color="#e6492d"; B.color="#3a6df0";
+  const files=await Promise.all(DEPS.map(d=>fetchScope(d.co).then(j=>({d,j})).catch(()=>({d,j:null}))));
+  const depts=files.map(({d,j})=>{
+    const T=(j&&j.totales&&j.totales.act)||{};
+    const va=voteOf(j,A.codcan), vb=voteOf(j,B.codcan);
+    const total=parseInt(T.votval||T.votant||"0",10)||0;
+    const win=(va.vot===0&&vb.vot===0)?null:(va.vot>=vb.vot?"A":"B");
+    return {co:d.co, name:titulo(d.n), nameNorm:norm(d.n), a:va, b:vb, total, mesas:(T.pmesesc||"0%"), win};
+  });
+  COMP={A,B,depts};
+  const lg='<div class="lg"><span class="sw" style="background:'+A.color+'"></span>'+A.nm+'</div>'+
+           '<div class="lg"><span class="sw" style="background:'+B.color+'"></span>'+B.nm+'</div>'+
+           '<div class="lg"><span class="sw" style="background:#3a4a6a"></span>Sin datos / otros</div>';
+  $("cmpLegend").innerHTML=lg; $("cmpLegend2").innerHTML=lg;
+  return COMP;
+}
+
+/* GeoJSON → rutas SVG proyectadas (una sola vez) */
+async function ensureGeo(){
+  if(GEOPATHS) return GEOPATHS;
+  const gj=await fetch(GEO_URL).then(r=>r.json());
+  let minX=999,minY=999,maxX=-999,maxY=-999;
+  const polysOf=g=> g.type==="Polygon"?[g.coordinates]:g.type==="MultiPolygon"?g.coordinates:[];
+  gj.features.forEach(f=>polysOf(f.geometry).forEach(p=>p.forEach(r=>r.forEach(c=>{
+    if(c[0]<minX)minX=c[0]; if(c[0]>maxX)maxX=c[0]; if(c[1]<minY)minY=c[1]; if(c[1]>maxY)maxY=c[1];
+  }))));
+  const W=620, midLat=(minY+maxY)/2, k=Math.cos(midLat*Math.PI/180);
+  const H=W*((maxY-minY)/((maxX-minX)*k));
+  const px=l=>((l-minX)/(maxX-minX))*W, py=l=>H-((l-minY)/(maxY-minY))*H;
+  GEOPATHS={W,H,items:[]};
+  gj.features.forEach(f=>{
+    const nm=norm(f.properties.NOMBRE_DPT||f.properties.NOMBRE||"");
+    let d="";
+    polysOf(f.geometry).forEach(poly=>poly.forEach(ring=>{
+      const step=ring.length>2000?4:ring.length>800?2:1;
+      for(let i=0;i<ring.length;i+=step){ const c=ring[i]; d+=(i===0?"M":"L")+px(c[0]).toFixed(1)+" "+py(c[1]).toFixed(1); }
+      d+="Z";
+    }));
+    GEOPATHS.items.push({nameNorm:nm,d});
+  });
+  return GEOPATHS;
+}
+function matchDept(g,depts){
+  let m=depts.find(d=>d.nameNorm===g); if(m) return m;
+  const t=g.split(" ")[0];
+  m=depts.find(d=>d.nameNorm.split(" ")[0]===t); if(m) return m;
+  return depts.find(d=>g.indexOf(d.nameNorm)>=0 || d.nameNorm.indexOf(g)>=0)||null;
+}
+
+async function buildMapa(){
+  const wrap=$("mapWrap");
+  try{
+    wrap.innerHTML='<div class="msg">Cargando mapa…</div>';
+    const [comp,gp]=await Promise.all([loadComparison(), ensureGeo()]);
+    let paths="";
+    gp.items.forEach(it=>{
+      const dep=matchDept(it.nameNorm, comp.depts);
+      let fill="#3a4a6a";
+      if(dep&&dep.win==="A") fill=comp.A.color; else if(dep&&dep.win==="B") fill=comp.B.color;
+      paths+='<path data-co="'+(dep?dep.co:"")+'" d="'+it.d+'" fill="'+fill+'"></path>';
+    });
+    wrap.innerHTML='<svg viewBox="0 0 '+gp.W+' '+gp.H.toFixed(0)+'" xmlns="http://www.w3.org/2000/svg">'+paths+'</svg>';
+    $("mapInfo").innerHTML="Toca un departamento para ver el detalle.";
+  }catch(e){ wrap.innerHTML='<div class="msg err">No se pudo cargar el mapa.</div>'; }
+}
+$("mapWrap").addEventListener("click", e=>{
+  const p=e.target.closest("path"); if(!p||!COMP) return;
+  document.querySelectorAll("#mapWrap path").forEach(x=>x.classList.remove("sel"));
+  p.classList.add("sel");
+  const d=COMP.depts.find(x=>x.co===p.getAttribute("data-co"));
+  if(!d){ $("mapInfo").textContent="Sin datos para este departamento."; return; }
+  const win=d.win==="A"?COMP.A:d.win==="B"?COMP.B:null;
+  $("mapInfo").innerHTML='<b>'+d.name+'</b> · '+d.mesas+' mesas escrutadas<br>'+
+    '<span style="color:'+COMP.A.color+'">●</span> '+COMP.A.nm+': '+fmt(d.a.vot)+' ('+d.a.pc.toFixed(2)+'%)<br>'+
+    '<span style="color:'+COMP.B.color+'">●</span> '+COMP.B.nm+': '+fmt(d.b.vot)+' ('+d.b.pc.toFixed(2)+'%)<br>'+
+    (win?('Va ganando: <b>'+win.nm+'</b>'):'Sin votos aún');
+});
+
+async function buildDep(){
+  const cont=$("depList");
+  try{
+    cont.innerHTML='<div class="msg">Cargando…</div>';
+    const comp=await loadComparison();
+    const rows=comp.depts.slice().sort((a,b)=>b.total-a.total);
+    const maxT=Math.max(1,...rows.map(r=>r.total));
+    cont.innerHTML=rows.map(d=>{
+      const wpct=(d.total/maxT*100).toFixed(1);
+      const aw=d.total?(d.a.vot/d.total*100):0, bw=d.total?(d.b.vot/d.total*100):0;
+      const rest=Math.max(0,100-aw-bw);
+      return '<div class="deprow"><div class="dt"><span class="nm">'+d.name+'</span>'+
+        '<span class="tot">'+fmt(d.total)+' votos · '+d.mesas+'</span></div>'+
+        '<div class="seg" style="width:'+wpct+'%">'+
+          '<span style="width:'+aw+'%;background:'+comp.A.color+'"></span>'+
+          '<span style="width:'+bw+'%;background:'+comp.B.color+'"></span>'+
+          '<span style="width:'+rest+'%;background:#3a4a6a"></span></div>'+
+        '<div class="leg2"><span style="color:'+comp.A.color+'">'+comp.A.ape+' '+d.a.pc.toFixed(1)+'%</span>'+
+          '<span style="color:'+comp.B.color+'">'+comp.B.ape+' '+d.b.pc.toFixed(1)+'%</span></div></div>';
+    }).join("");
+  }catch(e){ cont.innerHTML='<div class="msg err">No se pudo cargar.</div>'; }
+}
+
 /* ---------- Auto-refresco cada 5 min ---------- */
 function tickAuto(){
   if($("autoChk").checked){
     autoLeft--;
-    if(autoLeft<=0){ autoLeft=AUTO_SEG; chequearConfig(); cargarResultados(); }
+    if(autoLeft<=0){ autoLeft=AUTO_SEG; chequearConfig(); refrescarActivo(); }
   }
   const m=Math.floor(Math.max(0,autoLeft)/60), s=Math.max(0,autoLeft)%60;
   $("autoCount").textContent = m+":"+String(s).padStart(2,"0");
