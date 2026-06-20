@@ -81,6 +81,11 @@
   .detail .note{grid-column:1/-1;display:block;color:var(--mut);text-align:center;padding:8px}
   .detail .note.err{color:var(--bad)}
 
+  .rounds{display:flex;gap:8px;margin-bottom:12px}
+  .rnd{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;background:var(--card);color:var(--mut);
+    border:1px solid var(--line);border-radius:12px;padding:10px 6px;font-size:.92rem;font-weight:700;cursor:pointer}
+  .rnd small{font-size:.66rem;font-weight:500;opacity:.8}
+  .rnd.active{background:#1d3566;color:#fff;border-color:var(--bar)}
   .tabs{display:flex;gap:6px;margin-bottom:12px;background:var(--bg2);padding:4px;border-radius:12px;border:1px solid var(--line)}
   .tab{flex:1;background:transparent;color:var(--mut);border:none;border-radius:9px;padding:9px 4px;font-size:.82rem;font-weight:600;cursor:pointer}
   .tab.active{background:var(--acc);color:#1a1300}
@@ -114,8 +119,13 @@
 <div class="wrap">
   <header>
     <h1>Presidencial Colombia 2026</h1>
-    <div class="sub">Preconteo oficial · 1.ª vuelta · 31 de mayo</div>
+    <div class="sub" id="subTitle">Preconteo oficial</div>
   </header>
+
+  <div class="rounds" id="rounds">
+    <button class="rnd" data-round="r1">1.ª vuelta<small>31 may · final</small></button>
+    <button class="rnd active" data-round="r2">2.ª vuelta<small>21 jun · en vivo</small></button>
+  </div>
 
   <div id="banner" class="banner">
     <div class="lbl" id="bannerLbl">Resultados disponibles en</div>
@@ -179,7 +189,8 @@
 const PROXY_URL = "https://falling-sunset-c168.jjospinagon.workers.dev";
 
 const AUTO_SEG  = 300;                       // auto-refresco: 300s = 5 min
-const OPEN_TIME = new Date("2026-05-31T16:00:00-05:00"); // apertura resultados
+const OPEN_R2   = new Date("2026-06-21T16:00:00-05:00"); // apertura 2.ª vuelta
+const DATA_R1   = "data_r1.json";            // snapshot resultados 1.ª vuelta
 /* =========================================================== */
 
 const PALETA = ["#3a6df0","#e6492d","#39d98a","#ffc53d","#a162f7","#22b8cf",
@@ -192,15 +203,35 @@ const api = (t,c) => fetch(`${PROXY_URL}?t=${t}${c?("&c="+encodeURIComponent(c))
 
 let NOM=null, DEPS=[], MUNS={}, autoLeft=AUTO_SEG, autoTimer=null, isOpen=false;
 let CURRENT={dep:"00",mun:""}, SCOPECACHE={};
+let ROUND="r2", SNAP1=null;   // r1=primera vuelta (snapshot) · r2=segunda vuelta (en vivo)
 
-/* ---------- Cuenta regresiva a la apertura (16:00) ---------- */
+/* Enrutador de datos por vuelta: r1 lee snapshot estático; r2 lee el Worker en vivo */
+async function getScope(code){
+  if(ROUND==="r1"){
+    if(!SNAP1){ try{ SNAP1=await fetch(DATA_R1).then(r=>r.json()); }catch(e){ SNAP1={}; } }
+    return SNAP1[code] || null;
+  }
+  if(SCOPECACHE[code]) return SCOPECACHE[code];
+  const j=await api("res",code); SCOPECACHE[code]=j; return j;
+}
+
+/* ---------- Banner / cuenta regresiva según la vuelta ---------- */
+const r2NotOpen = ()=> ROUND==="r2" && (new Date() < OPEN_R2);
 function tickClock(){
-  const now=new Date(), diff=OPEN_TIME-now;
-  if(diff>0 && !isOpen){
+  if(ROUND==="r1"){
+    $("bannerLbl").textContent="Primera vuelta";
+    $("clock").innerHTML='Resultados <small>finales · 31 may</small>';
+    $("statePill").className="pill"; $("statePill").textContent="Escrutinio cerrado";
+    $("banner").classList.remove("open");
+    return;
+  }
+  const now=new Date(), diff=OPEN_R2-now;
+  if(diff>0){
     const h=Math.floor(diff/3.6e6), m=Math.floor(diff%3.6e6/6e4), s=Math.floor(diff%6e4/1e3);
     $("clock").innerHTML = String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
-    $("bannerLbl").textContent="Resultados disponibles en";
-    $("statePill").textContent="Apertura 31 may · 4:00 p. m.";
+    $("bannerLbl").textContent="Segunda vuelta disponible en";
+    $("statePill").className="pill"; $("statePill").textContent="Apertura 21 jun · 4:00 p. m.";
+    $("banner").classList.remove("open");
   }else{
     $("bannerLbl").textContent= isOpen ? "Conteo en tiempo real" : "Hora de apertura cumplida";
     const t=new Date();
@@ -244,11 +275,41 @@ $("autoChk").addEventListener("change",function(){ if(this.checked) autoLeft=AUT
 
 const titulo = s => (s||"").toLowerCase().replace(/(^|[\s.\-])(\p{L})/gu,(m,p,l)=>p+l.toUpperCase());
 
-/* ---------- Estado / config oficial ---------- */
+/* ---------- Finalistas y vista de espera (2.ª vuelta) ---------- */
+const FINALISTAS=[
+  {nm:"Iván Cepeda Castro", vi:"Aida Marina Quilcue Vivas", col:"#e6492d"},
+  {nm:"Abelardo De La Espriella", vi:"José Manuel Restrepo Abondano", col:"#3a6df0"}
+];
+function pintarEspera(){
+  $("stats").style.display="none"; $("progWrap").style.display="none";
+  $("scopeName").innerHTML='Mostrando: <span>Segunda vuelta</span>';
+  $("msg").style.display="block";
+  $("msg").innerHTML="La segunda vuelta abre el 21 de junio a las 4:00 p. m. Estos son los dos candidatos; los votos aparecerán aquí en vivo.";
+  $("cands").innerHTML=FINALISTAS.map(c=>
+    '<div class="cand"><div class="top"><div><div class="nm">'+c.nm+'</div><div class="vi">Vicepresidencia: '+c.vi+'</div></div>'+
+    '<div><div class="pc">0,00%</div><div class="vt">0 votos</div></div></div>'+
+    '<div class="track"><i style="width:0%;background:'+c.col+'"></i></div></div>').join("");
+}
+
+/* ---------- Menú de vueltas ---------- */
+document.getElementById("rounds").addEventListener("click", e=>{
+  const b=e.target.closest(".rnd"); if(!b||b.dataset.round===ROUND) return;
+  ROUND=b.dataset.round;
+  document.querySelectorAll(".rnd").forEach(x=>x.classList.toggle("active",x===b));
+  SCOPECACHE={}; COMP=null;
+  $("selDep").value="00";
+  $("selMun").innerHTML='<option value="">— Todo el departamento —</option>'; $("selMun").disabled=true;
+  $("subTitle").textContent = ROUND==="r1" ? "Primera vuelta · resultados finales · 31 may" : "Segunda vuelta · 21 jun";
+  tickClock();
+  if(ACTIVE==="res") cargarResultados(); else if(ACTIVE==="mapa") buildMapa(); else buildDep();
+});
+
+/* ---------- Estado / config oficial (solo 2.ª vuelta) ---------- */
 async function chequearConfig(){
+  if(ROUND!=="r2") return;
   try{
     const cfg=await api("cfg");
-    isOpen = !!cfg.isOpen;
+    isOpen = !!cfg.isOpen && (new Date()>=OPEN_R2);
     const pill=$("statePill");
     if(isOpen){ pill.className="pill live"; pill.textContent="En vivo"; $("banner").classList.add("open"); }
   }catch(e){}
@@ -264,14 +325,24 @@ async function cargarResultados(manual){
   $("scopeName").innerHTML = "Mostrando: <span>"+nombre+"</span>";
   if(manual){ $("refrescar").disabled=true; $("refrescar").textContent="Actualizando…"; }
 
+  if(r2NotOpen()){
+    pintarEspera();
+    if(manual){ $("refrescar").disabled=false; $("refrescar").textContent="Actualizar resultados"; }
+    $("lastUpd").textContent=new Date().toLocaleString("es-CO");
+    return;
+  }
+
   try{
-    const j = await api("res", code);
-    if(j.error){ throw new Error(j.error); }
+    const j = await getScope(code);
+    if(!j) throw new Error(ROUND==="r1"?"sin-archivo":"sin-datos");
+    if(j.error) throw new Error(j.error);
     pintar(j);
     autoLeft=AUTO_SEG;
   }catch(e){
-    $("msg").innerHTML='<span class="err">No se pudieron cargar los datos ('+e.message+').</span><br>'+
-      (PROXY_URL.indexOf("PEGA_AQUI")>=0?'Falta configurar PROXY_URL en el archivo.':'Reintenta en unos segundos.');
+    const r1mun=(ROUND==="r1" && mun);
+    $("msg").innerHTML = r1mun
+      ? 'El detalle por municipio no está disponible en la 1.ª vuelta archivada. Consulta a nivel nacional o por departamento.'
+      : '<span class="err">No se pudieron cargar los datos ('+e.message+').</span><br>Reintenta en unos segundos.';
     $("msg").style.display="block"; $("stats").style.display="none"; $("progWrap").style.display="none"; $("cands").innerHTML="";
   }finally{
     if(manual){ $("refrescar").disabled=false; $("refrescar").textContent="Actualizar resultados"; }
@@ -340,11 +411,7 @@ function childrenOf(){
   if(CURRENT.dep==="00") return DEPS.map(d=>({code:d.co,name:titulo(d.n)}));
   return (MUNS[CURRENT.dep]||[]).map(m=>({code:m.co,name:titulo(m.n)}));
 }
-async function fetchScope(code){
-  if(SCOPECACHE[code]) return SCOPECACHE[code];
-  const j = await api("res", code);
-  SCOPECACHE[code]=j; return j;
-}
+async function fetchScope(code){ return getScope(code); }
 function voteOf(j, codcan){
   let vot=0, pc=0;
   (j&&j.camaras||[]).forEach(cm=>(cm.partotabla||[]).forEach(pt=>{
@@ -360,6 +427,7 @@ $("cands").addEventListener("click", async function(e){
   const det=card.querySelector(".detail");
   const opening=card.classList.toggle("open");
   if(!opening || det.dataset.loaded==="1") return;
+  if(ROUND==="r1" && CURRENT.dep!=="00"){ det.innerHTML='<div class="note">El desglose por municipio no está disponible en la 1.ª vuelta archivada.</div>'; det.dataset.loaded="1"; return; }
   const kids=childrenOf();
   if(!kids||!kids.length){ det.innerHTML='<div class="note">Sin desglose disponible.</div>'; det.dataset.loaded="1"; return; }
   det.innerHTML='<div class="note">Cargando desglose…</div>';
@@ -462,6 +530,7 @@ function matchDept(g,depts){
 
 async function buildMapa(){
   const wrap=$("mapWrap");
+  if(r2NotOpen()){ wrap.innerHTML='<div class="msg">El mapa de la 2.ª vuelta estará disponible el 21 de junio a las 4:00 p. m.</div>'; $("mapInfo").textContent=""; return; }
   try{
     wrap.innerHTML='<div class="msg">Cargando mapa…</div>';
     const [comp,gp]=await Promise.all([loadComparison(), ensureGeo()]);
@@ -491,6 +560,7 @@ $("mapWrap").addEventListener("click", e=>{
 
 async function buildDep(){
   const cont=$("depList");
+  if(r2NotOpen()){ cont.innerHTML='<div class="msg">El detalle por departamento de la 2.ª vuelta estará disponible el 21 de junio a las 4:00 p. m.</div>'; return; }
   try{
     cont.innerHTML='<div class="msg">Cargando…</div>';
     const comp=await loadComparison();
@@ -525,6 +595,8 @@ autoTimer=setInterval(tickAuto,1000);
 
 /* ---------- Arranque ---------- */
 (async function init(){
+  $("subTitle").textContent = ROUND==="r1" ? "Primera vuelta · resultados finales · 31 may" : "Segunda vuelta · 21 jun";
+  tickClock();
   await chequearConfig();
   await cargarNomenclator();
   await cargarResultados();
