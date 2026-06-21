@@ -67,6 +67,16 @@
   .prog{height:8px;background:#0c1d3d;border-radius:999px;overflow:hidden;margin:0 0 16px;border:1px solid var(--line)}
   .prog > i{display:block;height:100%;background:linear-gradient(90deg,#39d98a,#3a6df0);width:0;transition:width .6s}
 
+  .leadbox{background:linear-gradient(135deg,#16294f,#1d3566);border:1px solid var(--bar);border-radius:14px;padding:11px 14px;margin-bottom:14px}
+  .leadbox .lrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .leadbox .ll{display:flex;align-items:center;gap:10px;min-width:0}
+  .leadbox .ll-t{font-size:.66rem;color:var(--mut);text-transform:uppercase;letter-spacing:.4px}
+  .leadbox .ll-n{font-weight:800;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .leadbox .lr{text-align:right;flex:none}
+  .leadbox .lr-d{font-weight:800;font-size:1.05rem;color:var(--acc);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .leadbox .lr-p{font-size:.7rem;color:var(--mut)}
+  .leadbox .lb{margin-top:9px;padding-top:8px;border-top:1px solid var(--line);font-size:.74rem;color:var(--mut);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+  .leadbox .lb b{color:#cfe0ff}
   .cand{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:9px}
   .cand .top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
   .cand .who{display:flex;align-items:center;gap:10px;min-width:0}
@@ -181,6 +191,7 @@
       <div class="stat"><div class="v" id="sAbs">—</div><div class="k">Abstención</div></div>
     </div>
     <div class="prog" id="progWrap" style="display:none"><i id="progBar"></i></div>
+    <div class="leadbox" id="leadBox" style="display:none"></div>
     <div id="cands"></div>
     <div id="msg" class="msg">Cargando datos…</div>
   </div>
@@ -324,7 +335,7 @@ function secondRoundLive(j){
   return n>0 && n<=4;  // respaldo: la 2.ª vuelta tiene solo 2 candidatos
 }
 function pintarEspera(msg){
-  $("stats").style.display="none"; $("progWrap").style.display="none";
+  $("stats").style.display="none"; $("progWrap").style.display="none"; $("leadBox").style.display="none";
   $("scopeName").innerHTML='Mostrando: <span>Segunda vuelta</span>';
   $("msg").style.display="block";
   $("msg").innerHTML = msg || "La segunda vuelta abre el 21 de junio a las 4:00 p. m. Estos son los dos candidatos; los votos aparecerán aquí en vivo.";
@@ -392,7 +403,7 @@ async function cargarResultados(manual){
     $("msg").innerHTML = r1mun
       ? 'El detalle por municipio no está disponible en la 1.ª vuelta archivada. Consulta a nivel nacional o por departamento.'
       : '<span class="err">No se pudieron cargar los datos ('+e.message+').</span><br>Reintenta en unos segundos.';
-    $("msg").style.display="block"; $("stats").style.display="none"; $("progWrap").style.display="none"; $("cands").innerHTML="";
+    $("msg").style.display="block"; $("stats").style.display="none"; $("progWrap").style.display="none"; $("leadBox").style.display="none"; $("cands").innerHTML="";
   }finally{
     if(manual){ $("refrescar").disabled=false; $("refrescar").textContent="Actualizar resultados"; }
     $("lastUpd").textContent=new Date().toLocaleString("es-CO");
@@ -437,6 +448,22 @@ function pintar(j){
       : "Aún no abre el preconteo (4:00 p. m.). Estos son los candidatos; los votos y % aparecerán aquí en vivo.";
   } else {
     $("msg").style.display="none";
+  }
+  // Recuadro: quién va ganando + diferencia de votos + boletín más reciente
+  const lb=$("leadBox");
+  if(allZero){ lb.style.display="none"; }
+  else{
+    const L=cands[0], S=cands[1]||{vot:0,pc:0};
+    const dVot=L.vot-S.vot, dPP=L.pc-S.pc;
+    const num=(j.numdep||j.numact);
+    const hora=(typeof j.mdhm==="string"&&j.mdhm.length>=8)?(" · <b>"+j.mdhm.slice(4,6)+":"+j.mdhm.slice(6,8)+"</b>"):"";
+    const bol = (num!==undefined&&num!=="") ? ("Boletín N.° <b>"+num+"</b>"+hora) : "Resultados <b>finales</b> · 31 may";
+    lb.style.display="block";
+    lb.innerHTML='<div class="lrow">'+
+      '<div class="ll">'+avatar(L.codcan,L.nm,PALETA[0],"sm")+'<div><div class="ll-t">Va ganando</div><div class="ll-n">'+L.nm+'</div></div></div>'+
+      '<div class="lr"><div class="lr-d">+'+fmt(dVot)+' votos</div><div class="lr-p">ventaja de '+dPP.toLocaleString("es-CO",{minimumFractionDigits:2,maximumFractionDigits:2})+' pp</div></div>'+
+      '</div>'+
+      '<div class="lb"><span>'+bol+'</span><span><b>'+(T.pmesesc||"0%")+'</b> mesas</span></div>';
   }
   const expandable = !CURRENT.mun;
   const childLabel = CURRENT.dep==="00" ? "departamento" : "municipio";
