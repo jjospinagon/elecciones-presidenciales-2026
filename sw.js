@@ -1,6 +1,6 @@
 /* Service Worker — Elecciones 2026
    App shell cacheada (rápida y disponible offline); datos en vivo siempre por red. */
-const CACHE = "elec2026-v4";
+const CACHE = "elec2026-v5";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest",
                "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png", "./data_r1.json"];
 
@@ -18,6 +18,8 @@ self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
   const u = new URL(e.request.url);
   const live = u.hostname.includes("workers.dev");          // datos en vivo (Worker)
+  // Otros dominios (fotos de candidatos, etc.): el navegador los maneja directo.
+  if (u.origin !== location.origin && !live) return;
   const html = e.request.mode === "navigate" || u.pathname.endsWith(".html");
   if (live || html) {
     // Red primero: siempre lo más fresco; si no hay red, cae a caché.
@@ -32,10 +34,6 @@ self.addEventListener("fetch", e => {
     );
     return;
   }
-  // Estáticos e imágenes (íconos, manifiesto, data_r1, fotos de candidatos):
-  // caché primero; si no está, se descarga y se guarda para próximas veces.
-  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(resp => {
-    try { const cp = resp.clone(); caches.open(CACHE).then(c => c.put(e.request, cp)); } catch (err) {}
-    return resp;
-  }).catch(() => r)));
+  // Estáticos propios (íconos, manifiesto, data_r1): caché primero.
+  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
 });
