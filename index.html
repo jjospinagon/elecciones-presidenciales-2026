@@ -201,7 +201,7 @@ const PROXY_URL = "https://falling-sunset-c168.jjospinagon.workers.dev";
 
 const AUTO_FAST = 15;                        // en vivo (2.ª vuelta tras apertura): 15 s
 const AUTO_SLOW = 300;                        // antes de apertura / 1.ª vuelta: 5 min
-const autoSeg = () => (ROUND === "r2" && new Date() >= OPEN_R2) ? AUTO_FAST : AUTO_SLOW;
+const autoSeg = () => (ROUND === "r2") ? AUTO_FAST : AUTO_SLOW;  // 2.ª vuelta: 15 s (capta la apertura al instante)
 const OPEN_R2   = new Date("2026-06-21T16:00:00-05:00"); // apertura 2.ª vuelta
 const DATA_R1   = "data_r1.json";            // snapshot resultados 1.ª vuelta
 /* =========================================================== */
@@ -214,7 +214,7 @@ const fmt = n => (isNaN(n)?"—":Number(n).toLocaleString("es-CO"));
 const api = (t,c) => fetch(`${PROXY_URL}?t=${t}${c?("&c="+encodeURIComponent(c)):""}`)
                       .then(r=>r.json());
 
-let NOM=null, DEPS=[], MUNS={}, autoLeft=AUTO_SLOW, autoTimer=null, isOpen=false;
+let NOM=null, DEPS=[], MUNS={}, autoLeft=AUTO_FAST, autoTimer=null, isOpen=false;
 let CURRENT={dep:"00",mun:""}, SCOPECACHE={};
 let ROUND="r2", SNAP1=null;   // r1=primera vuelta (snapshot) · r2=segunda vuelta (en vivo)
 
@@ -347,6 +347,7 @@ async function cargarResultados(manual){
 
   if(r2NotOpen()){
     pintarEspera();
+    autoLeft=autoSeg();
     if(manual){ $("refrescar").disabled=false; $("refrescar").textContent="Actualizar resultados"; }
     $("lastUpd").textContent=new Date().toLocaleString("es-CO");
     return;
