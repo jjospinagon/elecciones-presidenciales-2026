@@ -68,7 +68,11 @@
   .prog > i{display:block;height:100%;background:linear-gradient(90deg,#39d98a,#3a6df0);width:0;transition:width .6s}
 
   .cand{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:9px}
-  .cand .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .cand .top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+  .cand .who{display:flex;align-items:center;gap:10px;min-width:0}
+  .av{position:relative;width:42px;height:42px;border-radius:50%;flex:none;overflow:hidden;display:flex;
+    align-items:center;justify-content:center;font-size:.8rem;font-weight:800;color:#fff;border:2px solid var(--line)}
+  .av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top}
   .cand .nm{font-weight:700;font-size:.95rem}
   .cand .vi{font-size:.72rem;color:var(--mut);font-weight:400}
   .cand .pc{font-size:1.05rem;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -288,10 +292,22 @@ $("autoChk").addEventListener("change",function(){ if(this.checked) autoLeft=aut
 
 const titulo = s => (s||"").toLowerCase().replace(/(^|[\s.\-])(\p{L})/gu,(m,p,l)=>p+l.toUpperCase());
 
+/* ---------- Fotos de candidatos (Wikimedia Commons) y avatar ---------- */
+const PHOTOS={
+  "1":"https://www.presidenteivancepeda.com/_next/image?url=%2Fivan-trans.png&w=3840&q=75&dpl=dpl_EyihFKgZ6FanoUhzwhno3V2jp7Zw",
+  "4":"https://caracol.com.co/resizer/v2/5RABFK5LRNDNFIV4ABT2JH2UQQ.jpg?auth=4f3aeff4257ff978efe9a09ed8c7ccac0769f5f21656623020466b91d0c2a10d"
+};
+const iniciales = nm => { const w=(nm||"").trim().split(/\s+/); return (((w[0]||"")[0]||"")+((w[1]||"")[0]||"")).toUpperCase(); };
+function avatar(codcan, nm, col){
+  const ph=PHOTOS[String(codcan)];
+  return '<span class="av" style="background:'+(col||"#23467f")+'">'+iniciales(nm)
+       + (ph?'<img src="'+ph+'" alt="" loading="lazy" onerror="this.remove()">':'') + '</span>';
+}
+
 /* ---------- Finalistas y vista de espera (2.ª vuelta) ---------- */
 const FINALISTAS=[
-  {nm:"Iván Cepeda Castro", vi:"Aida Marina Quilcue Vivas", col:"#e6492d"},
-  {nm:"Abelardo De La Espriella", vi:"José Manuel Restrepo Abondano", col:"#3a6df0"}
+  {codcan:"1", nm:"Iván Cepeda Castro", vi:"Aida Marina Quilcue Vivas", col:"#e6492d"},
+  {codcan:"4", nm:"Abelardo De La Espriella", vi:"José Manuel Restrepo Abondano", col:"#3a6df0"}
 ];
 /* ¿Los datos en vivo ya son de 2.ª vuelta? (evita mostrar datos viejos de 1.ª) */
 function secondRoundLive(j){
@@ -306,7 +322,7 @@ function pintarEspera(msg){
   $("msg").style.display="block";
   $("msg").innerHTML = msg || "La segunda vuelta abre el 21 de junio a las 4:00 p. m. Estos son los dos candidatos; los votos aparecerán aquí en vivo.";
   $("cands").innerHTML=FINALISTAS.map(c=>
-    '<div class="cand"><div class="top"><div><div class="nm">'+c.nm+'</div><div class="vi">Vicepresidencia: '+c.vi+'</div></div>'+
+    '<div class="cand"><div class="top"><div class="who">'+avatar(c.codcan,c.nm,c.col)+'<div><div class="nm">'+c.nm+'</div><div class="vi">Vicepresidencia: '+c.vi+'</div></div></div>'+
     '<div><div class="pc">0,00%</div><div class="vt">0 votos</div></div></div>'+
     '<div class="track"><i style="width:0%;background:'+c.col+'"></i></div></div>').join("");
 }
@@ -421,7 +437,7 @@ function pintar(j){
     const col=PALETA[i%PALETA.length];
     return `<div class="cand ${(i===0&&!allZero)?'lead':''} ${expandable?'exp':''}" data-codcan="${c.codcan}" data-color="${col}">
       <div class="top">
-        <div><div class="nm">${c.nm}</div><div class="vi">Vicepresidencia: ${c.vi||"—"}</div></div>
+        <div class="who">${avatar(c.codcan,c.nm,col)}<div><div class="nm">${c.nm}</div><div class="vi">Vicepresidencia: ${c.vi||"—"}</div></div></div>
         <div><div class="pc">${c.pc.toLocaleString("es-CO",{minimumFractionDigits:2,maximumFractionDigits:2})}%</div>
              <div class="vt">${fmt(c.vot)} votos</div></div>
       </div>
