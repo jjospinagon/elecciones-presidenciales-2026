@@ -73,6 +73,8 @@
   .av{position:relative;width:42px;height:42px;border-radius:50%;flex:none;overflow:hidden;display:flex;
     align-items:center;justify-content:center;font-size:.8rem;font-weight:800;color:#fff;border:2px solid var(--line)}
   .av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top}
+  .av.sm{width:26px;height:26px;font-size:.6rem;border-width:1.5px}
+  .av.xs{width:20px;height:20px;font-size:.52rem;border-width:1px}
   .cand .nm{font-weight:700;font-size:.95rem}
   .cand .vi{font-size:.72rem;color:var(--mut);font-weight:400}
   .cand .pc{font-size:1.05rem;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -123,7 +125,12 @@
   .deprow .dt .tot{color:var(--mut);font-size:.72rem;font-variant-numeric:tabular-nums}
   .seg{display:flex;height:16px;border-radius:6px;overflow:hidden;background:#0c1d3d}
   .seg > span{display:block;height:100%}
-  .deprow .leg2{display:flex;justify-content:space-between;font-size:.7rem;margin-top:5px;color:var(--mut);font-variant-numeric:tabular-nums}
+  .deprow .leg2{display:flex;justify-content:space-between;font-size:.7rem;margin-top:6px;color:var(--mut);font-variant-numeric:tabular-nums}
+  .deprow .lg2c{display:flex;align-items:center;gap:5px}
+  .cmpInfo .mi-r{display:flex;align-items:center;gap:8px;margin-top:6px}
+  .cmpInfo .mi-r .nm2{flex:1;color:var(--txt)}
+  .cmpInfo .mi-w{margin-top:8px}
+  .detail .dhead{display:flex;align-items:center;gap:8px}
   .msg{text-align:center;color:var(--mut);font-size:.85rem;padding:24px 8px}
   .foot{text-align:center;color:var(--mut);font-size:.7rem;margin-top:18px;line-height:1.6}
   .foot a{color:var(--mut)}
@@ -298,9 +305,9 @@ const PHOTOS={
   "4":"https://caracol.com.co/resizer/v2/5RABFK5LRNDNFIV4ABT2JH2UQQ.jpg?auth=4f3aeff4257ff978efe9a09ed8c7ccac0769f5f21656623020466b91d0c2a10d"
 };
 const iniciales = nm => { const w=(nm||"").trim().split(/\s+/); return (((w[0]||"")[0]||"")+((w[1]||"")[0]||"")).toUpperCase(); };
-function avatar(codcan, nm, col){
+function avatar(codcan, nm, col, cls){
   const ph=PHOTOS[String(codcan)];
-  return '<span class="av" style="background:'+(col||"#23467f")+'">'+iniciales(nm)
+  return '<span class="av '+(cls||"")+'" style="background:'+(col||"#23467f")+'">'+iniciales(nm)
        + (ph?'<img src="'+ph+'" alt="" loading="lazy" onerror="this.remove()">':'') + '</span>';
 }
 
@@ -474,13 +481,14 @@ $("cands").addEventListener("click", async function(e){
   if(!kids||!kids.length){ det.innerHTML='<div class="note">Sin desglose disponible.</div>'; det.dataset.loaded="1"; return; }
   det.innerHTML='<div class="note">Cargando desglose…</div>';
   const codcan=card.dataset.codcan, color=card.dataset.color;
+  const cnm=(card.querySelector(".nm")||{}).textContent||"";
   const lvl = CURRENT.dep==="00" ? "departamento" : "municipio";
   try{
     const files=await Promise.all(kids.map(k=>fetchScope(k.code).then(j=>({k,j})).catch(()=>({k,j:null}))));
     let rows=files.map(({k,j})=>{ const v=voteOf(j,codcan); return {name:k.name, vot:v.vot, pc:v.pc}; });
     rows.sort((a,b)=>b.vot-a.vot);
     const maxv=Math.max(1,...rows.map(r=>r.vot));
-    det.innerHTML='<div class="dhead">Votos por '+lvl+'</div>'+rows.map(r=>`
+    det.innerHTML='<div class="dhead">'+avatar(codcan,cnm,color,"sm")+'<span>'+cnm+' · votos por '+lvl+'</span></div>'+rows.map(r=>`
       <div class="drow">
         <div class="dname">${r.name}</div>
         <div class="dbar"><i style="width:${(r.vot/maxv*100).toFixed(1)}%;background:${color}"></i></div>
@@ -532,8 +540,8 @@ async function loadComparison(){
     return {co:d.co, name:titulo(d.n), nameNorm:norm(d.n), a:va, b:vb, total, mesas:(T.pmesesc||"0%"), win};
   });
   COMP={A,B,depts};
-  const lg='<div class="lg"><span class="sw" style="background:'+A.color+'"></span>'+A.nm+'</div>'+
-           '<div class="lg"><span class="sw" style="background:'+B.color+'"></span>'+B.nm+'</div>'+
+  const lg='<div class="lg">'+avatar(A.codcan,A.nm,A.color,"sm")+'<span style="color:'+A.color+'">'+A.nm+'</span></div>'+
+           '<div class="lg">'+avatar(B.codcan,B.nm,B.color,"sm")+'<span style="color:'+B.color+'">'+B.nm+'</span></div>'+
            '<div class="lg"><span class="sw" style="background:#3a4a6a"></span>Sin datos / otros</div>';
   $("cmpLegend").innerHTML=lg; $("cmpLegend2").innerHTML=lg;
   return COMP;
@@ -596,10 +604,10 @@ $("mapWrap").addEventListener("click", e=>{
   const d=COMP.depts.find(x=>x.co===p.getAttribute("data-co"));
   if(!d){ $("mapInfo").textContent="Sin datos para este departamento."; return; }
   const win=d.win==="A"?COMP.A:d.win==="B"?COMP.B:null;
-  $("mapInfo").innerHTML='<b>'+d.name+'</b> · '+d.mesas+' mesas escrutadas<br>'+
-    '<span style="color:'+COMP.A.color+'">●</span> '+COMP.A.nm+': '+fmt(d.a.vot)+' ('+d.a.pc.toFixed(2)+'%)<br>'+
-    '<span style="color:'+COMP.B.color+'">●</span> '+COMP.B.nm+': '+fmt(d.b.vot)+' ('+d.b.pc.toFixed(2)+'%)<br>'+
-    (win?('Va ganando: <b>'+win.nm+'</b>'):'Sin votos aún');
+  $("mapInfo").innerHTML='<div><b>'+d.name+'</b> · '+d.mesas+' mesas escrutadas</div>'+
+    '<div class="mi-r">'+avatar(COMP.A.codcan,COMP.A.nm,COMP.A.color,"sm")+'<span class="nm2">'+COMP.A.nm+'</span><b style="color:'+COMP.A.color+'">'+fmt(d.a.vot)+' · '+d.a.pc.toFixed(2)+'%</b></div>'+
+    '<div class="mi-r">'+avatar(COMP.B.codcan,COMP.B.nm,COMP.B.color,"sm")+'<span class="nm2">'+COMP.B.nm+'</span><b style="color:'+COMP.B.color+'">'+fmt(d.b.vot)+' · '+d.b.pc.toFixed(2)+'%</b></div>'+
+    '<div class="mi-w">'+(win?('Va ganando: <b>'+win.nm+'</b>'):'Sin votos aún')+'</div>';
 });
 
 async function buildDep(){
@@ -621,8 +629,8 @@ async function buildDep(){
           '<span style="width:'+aw+'%;background:'+comp.A.color+'"></span>'+
           '<span style="width:'+bw+'%;background:'+comp.B.color+'"></span>'+
           '<span style="width:'+rest+'%;background:#3a4a6a"></span></div>'+
-        '<div class="leg2"><span style="color:'+comp.A.color+'">'+comp.A.ape+' '+d.a.pc.toFixed(1)+'%</span>'+
-          '<span style="color:'+comp.B.color+'">'+comp.B.ape+' '+d.b.pc.toFixed(1)+'%</span></div></div>';
+        '<div class="leg2"><span class="lg2c">'+avatar(comp.A.codcan,comp.A.nm,comp.A.color,"xs")+'<span style="color:'+comp.A.color+'">'+comp.A.ape+' '+d.a.pc.toFixed(1)+'%</span></span>'+
+          '<span class="lg2c"><span style="color:'+comp.B.color+'">'+comp.B.ape+' '+d.b.pc.toFixed(1)+'%</span>'+avatar(comp.B.codcan,comp.B.nm,comp.B.color,"xs")+'</span></div></div>';
     }).join("");
   }catch(e){ cont.innerHTML='<div class="msg err">No se pudo cargar.</div>'; }
 }
