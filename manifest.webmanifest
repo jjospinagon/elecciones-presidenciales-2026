@@ -1,0 +1,17 @@
+{
+  "name": "Elecciones Presidenciales Colombia 2026",
+  "short_name": "Elecciones 2026",
+  "description": "Preconteo oficial en vivo — 1.ª y 2.ª vuelta presidencial",
+  "lang": "es-CO",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b1b3a",
+  "theme_color": "#0b1b3a",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

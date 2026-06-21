@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0b1b3a">
 <title>Elecciones Presidenciales Colombia 2026 — Preconteo</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Elecciones 2026">
 <style>
   :root{
     --bg:#0b1b3a; --bg2:#11264f; --card:#16294f; --line:#26406f;
@@ -192,7 +199,9 @@
 /* Proxy: Cloudflare Worker (pasa el WAF de la Registraduría y añade CORS) */
 const PROXY_URL = "https://falling-sunset-c168.jjospinagon.workers.dev";
 
-const AUTO_SEG  = 300;                       // auto-refresco: 300s = 5 min
+const AUTO_FAST = 15;                        // en vivo (2.ª vuelta tras apertura): 15 s
+const AUTO_SLOW = 300;                        // antes de apertura / 1.ª vuelta: 5 min
+const autoSeg = () => (ROUND === "r2" && new Date() >= OPEN_R2) ? AUTO_FAST : AUTO_SLOW;
 const OPEN_R2   = new Date("2026-06-21T16:00:00-05:00"); // apertura 2.ª vuelta
 const DATA_R1   = "data_r1.json";            // snapshot resultados 1.ª vuelta
 /* =========================================================== */
@@ -205,7 +214,7 @@ const fmt = n => (isNaN(n)?"—":Number(n).toLocaleString("es-CO"));
 const api = (t,c) => fetch(`${PROXY_URL}?t=${t}${c?("&c="+encodeURIComponent(c)):""}`)
                       .then(r=>r.json());
 
-let NOM=null, DEPS=[], MUNS={}, autoLeft=AUTO_SEG, autoTimer=null, isOpen=false;
+let NOM=null, DEPS=[], MUNS={}, autoLeft=AUTO_SLOW, autoTimer=null, isOpen=false;
 let CURRENT={dep:"00",mun:""}, SCOPECACHE={};
 let ROUND="r2", SNAP1=null;   // r1=primera vuelta (snapshot) · r2=segunda vuelta (en vivo)
 
@@ -275,7 +284,7 @@ $("selDep").addEventListener("change",function(){
 });
 $("selMun").addEventListener("change",cargarResultados);
 $("refrescar").addEventListener("click",()=>refrescarActivo(true));
-$("autoChk").addEventListener("change",function(){ if(this.checked) autoLeft=AUTO_SEG; });
+$("autoChk").addEventListener("change",function(){ if(this.checked) autoLeft=autoSeg(); });
 
 const titulo = s => (s||"").toLowerCase().replace(/(^|[\s.\-])(\p{L})/gu,(m,p,l)=>p+l.toUpperCase());
 
@@ -341,7 +350,7 @@ async function cargarResultados(manual){
     if(!j) throw new Error(ROUND==="r1"?"sin-archivo":"sin-datos");
     if(j.error) throw new Error(j.error);
     pintar(j);
-    autoLeft=AUTO_SEG;
+    autoLeft=autoSeg();
   }catch(e){
     const r1mun=(ROUND==="r1" && mun);
     $("msg").innerHTML = r1mun
@@ -590,7 +599,7 @@ async function buildDep(){
 function tickAuto(){
   if($("autoChk").checked){
     autoLeft--;
-    if(autoLeft<=0){ autoLeft=AUTO_SEG; chequearConfig(); refrescarActivo(); }
+    if(autoLeft<=0){ autoLeft=autoSeg(); chequearConfig(); refrescarActivo(); }
   }
   const m=Math.floor(Math.max(0,autoLeft)/60), s=Math.max(0,autoLeft)%60;
   $("autoCount").textContent = m+":"+String(s).padStart(2,"0");
@@ -598,6 +607,8 @@ function tickAuto(){
 autoTimer=setInterval(tickAuto,1000);
 
 /* ---------- Arranque ---------- */
+if("serviceWorker" in navigator){ window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{})); }
+
 (async function init(){
   $("subTitle").textContent = ROUND==="r1" ? "Primera vuelta · resultados finales · 31 may" : "Segunda vuelta · 21 jun";
   tickClock();
