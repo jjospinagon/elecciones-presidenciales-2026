@@ -685,7 +685,7 @@ async function buildDep(){
     const paralelo='<div class="wgrid">'+col(comp.A,winsOf("A","B"))+col(comp.B,winsOf("B","A"))+'</div>'+
         '<div class="depttl">Detalle por departamento</div>';
 
-    const rows=comp.depts.slice().sort((a,b)=>b.total-a.total);
+    const rows=comp.depts.slice().sort((a,b)=>a.name.localeCompare(b.name,"es"));
     const maxT=Math.max(1,...rows.map(r=>r.total));
     cont.innerHTML=paralelo+rows.map(d=>{
       const wpct=(d.total/maxT*100).toFixed(1);
