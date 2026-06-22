@@ -114,7 +114,7 @@
   .rnd small{font-size:.66rem;font-weight:500;opacity:.8}
   .rnd.active{background:#1d3566;color:#fff;border-color:var(--bar)}
   .tabs{display:flex;gap:6px;margin-bottom:12px;background:var(--bg2);padding:4px;border-radius:12px;border:1px solid var(--line)}
-  .tab{flex:1;background:transparent;color:var(--mut);border:none;border-radius:9px;padding:9px 4px;font-size:.82rem;font-weight:600;cursor:pointer}
+  .tab{flex:1;background:transparent;color:var(--mut);border:none;border-radius:9px;padding:9px 3px;font-size:.76rem;font-weight:600;cursor:pointer;line-height:1.15}
   .tab.active{background:var(--acc);color:#1a1300}
   .pane{animation:fade .25s}
   @keyframes fade{from{opacity:.4}to{opacity:1}}
@@ -153,6 +153,23 @@
   .wrm small{display:block;color:var(--mut);font-weight:600;font-size:.66rem}
   .wempty{color:var(--mut);font-size:.75rem;padding:6px 0}
   .depttl{font-weight:800;font-size:.82rem;color:var(--mut);margin:2px 0 8px}
+  .esc-nac{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 14px;text-align:center;margin-bottom:12px}
+  .esc-pct{font-size:2.4rem;font-weight:800;color:var(--ok);line-height:1;font-variant-numeric:tabular-nums}
+  .esc-sub{color:var(--mut);font-size:.78rem;margin-top:4px}
+  .esc-prog{height:10px;border-radius:6px;background:#0c1d3d;overflow:hidden;margin:12px 0}
+  .esc-prog > i{display:block;height:100%;background:var(--ok)}
+  .esc-row3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px}
+  .esc-row3 > div{background:#0e2147;border-radius:10px;padding:8px 4px}
+  .esc-row3 b{display:block;font-size:1.05rem;font-variant-numeric:tabular-nums}
+  .esc-row3 span{color:var(--mut);font-size:.66rem}
+  .escrow{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:7px}
+  .escrow .er-t{display:flex;justify-content:space-between;align-items:baseline;font-size:.82rem;margin-bottom:6px;gap:6px}
+  .escrow .er-t .nm{font-weight:700}
+  .escrow .er-n{color:var(--mut);font-size:.72rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .escrow .er-bar{height:8px;border-radius:5px;background:#0c1d3d;overflow:hidden}
+  .escrow .er-bar > i{display:block;height:100%;background:var(--ok)}
+  .esc-foot{color:var(--mut);font-size:.74rem;margin-top:12px;text-align:center;line-height:1.5}
+  .esc-foot a{color:var(--acc)}
   .msg{text-align:center;color:var(--mut);font-size:.85rem;padding:24px 8px}
   .foot{text-align:center;color:var(--mut);font-size:.7rem;margin-top:18px;line-height:1.6}
   .foot a{color:var(--mut)}
@@ -189,6 +206,7 @@
     <button class="tab active" data-tab="res">Resultados</button>
     <button class="tab" data-tab="mapa">Mapa</button>
     <button class="tab" data-tab="dep">Departamentos</button>
+    <button class="tab" data-tab="esc">Escrutinio</button>
   </div>
 
   <div id="tab-res" class="pane">
@@ -219,6 +237,11 @@
     <div class="cmpHead" id="depHead">Departamentos · barra = votos escrutados · color = los 2 primeros</div>
     <div class="legend" id="cmpLegend2"></div>
     <div id="depList"><div class="msg">Cargando…</div></div>
+  </div>
+
+  <div id="tab-esc" class="pane" hidden>
+    <div class="cmpHead" id="escHead">Escrutinio oficial de los jueces · avance de mesas revisadas</div>
+    <div id="escWrap"><div class="msg">Cargando…</div></div>
   </div>
 
   <div class="foot">
@@ -553,13 +576,15 @@ document.getElementById("tabs").addEventListener("click", e=>{
   const b=e.target.closest(".tab"); if(!b) return;
   ACTIVE=b.dataset.tab; RTOKEN++;
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t===b));
-  ["res","mapa","dep"].forEach(id=>{ $("tab-"+id).hidden = (id!==ACTIVE); });
+  ["res","mapa","dep","esc"].forEach(id=>{ $("tab-"+id).hidden = (id!==ACTIVE); });
   if(ACTIVE==="mapa") buildMapa();
   else if(ACTIVE==="dep") buildDep();
+  else if(ACTIVE==="esc") buildEsc();
 });
 
 function refrescarActivo(manual){
   if(ACTIVE==="res") return cargarResultados(manual);
+  if(ACTIVE==="esc") return buildEsc();
   COMP=null; SCOPECACHE={};                 // recálculo con datos frescos
   if(ACTIVE==="mapa") return buildMapa();
   if(ACTIVE==="dep") return buildDep();
@@ -701,6 +726,47 @@ async function buildDep(){
           '<span class="lg2c"><span style="color:'+comp.B.color+'">'+comp.B.ape+' '+d.b.pc.toFixed(1)+'%</span>'+avatar(comp.B.codcan,comp.B.nm,comp.B.color,"xs")+'</span></div></div>';
     }).join("");
   }catch(e){ cont.innerHTML='<div class="msg err">No se pudo cargar.</div>'; }
+}
+
+/* ================= Pestaña: Escrutinio oficial (avance de mesas) ================= */
+function escFooter(){
+  return '<div class="esc-foot">Los votos oficiales quedan en las actas <b>E-26</b>; el CNE declara el resultado final. '+
+    '<a href="https://escrutinios2vueltapresidente2026.registraduria.gov.co/actas-escrutinio" target="_blank" rel="noopener">Abrir portal oficial de escrutinios</a></div>';
+}
+async function buildEsc(){
+  const tok=RTOKEN;
+  const cont=$("escWrap");
+  if(ROUND==="r1"){
+    cont.innerHTML='<div class="msg">El escrutinio en vivo corresponde a la 2.ª vuelta. La 1.ª vuelta ya fue declarada oficialmente por el CNE.</div>'+escFooter();
+    return;
+  }
+  if(r2NotOpen()){ cont.innerHTML='<div class="msg">El escrutinio de la 2.ª vuelta inicia tras el cierre de las urnas el 21 de junio.</div>'; return; }
+  try{
+    if(!cont.querySelector(".esc-nac")) cont.innerHTML='<div class="msg">Cargando…</div>';
+    const j=await api("esc");
+    if(tok!==RTOKEN) return;                              // cambió de pestaña/vuelta
+    if(!j || !j.nacional || j.error){ cont.innerHTML='<div class="msg">Esperando datos del escrutinio oficial… (se actualiza solo)</div>'+escFooter(); return; }
+    const n=j.nacional;
+    const inst=parseInt(n.mesasInstaladas||0,10), esc=parseInt(n.mesasEscrutadas||0,10);
+    const falt=(n.mesasFaltantes!=null)?parseInt(n.mesasFaltantes,10):Math.max(0,inst-esc);
+    const pe=(n.porcentajeEscrutadas!=null)?Number(n.porcentajeEscrutadas):(inst?esc/inst*100:0);
+    const nac='<div class="esc-nac">'+
+      '<div class="esc-pct">'+pe.toLocaleString("es-CO",{minimumFractionDigits:2,maximumFractionDigits:2})+'%</div>'+
+      '<div class="esc-sub">mesas escrutadas por los jueces de la República</div>'+
+      '<div class="esc-prog"><i style="width:'+Math.min(100,pe).toFixed(2)+'%"></i></div>'+
+      '<div class="esc-row3">'+
+        '<div><b>'+fmt(esc)+'</b><span>escrutadas</span></div>'+
+        '<div><b>'+fmt(inst)+'</b><span>instaladas</span></div>'+
+        '<div><b>'+fmt(falt)+'</b><span>faltantes</span></div></div></div>';
+    const deps=(j.departamentos||[]).slice().sort((a,b)=>String(a.nombre).localeCompare(String(b.nombre),"es"));
+    const list=deps.length?('<div class="depttl">Avance por departamento</div>'+deps.map(d=>{
+      const p=Number(d.pct)||0;
+      return '<div class="escrow"><div class="er-t"><span class="nm">'+depName(d.nombre)+'</span>'+
+        '<span class="er-n">'+fmt(d.escrutado)+' / '+fmt(d.total)+' · '+p.toFixed(1)+'%</span></div>'+
+        '<div class="er-bar"><i style="width:'+Math.min(100,p).toFixed(1)+'%"></i></div></div>';
+    }).join("")):'';
+    cont.innerHTML=nac+list+escFooter();
+  }catch(e){ cont.innerHTML='<div class="msg err">No se pudo cargar el escrutinio.</div>'+escFooter(); }
 }
 
 /* ---------- Auto-refresco cada 5 min ---------- */
