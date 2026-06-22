@@ -304,7 +304,7 @@ async function cargarNomenclator(){
       MUNS[d.co]=munIdx.map(i=>byIdx[i]).sort((a,b)=>a.n.localeCompare(b.n,"es"));
     });
     const sel=$("selDep");
-    DEPS.forEach(d=> sel.add(new Option(titulo(d.n)+(MUNS[d.co]?` (${MUNS[d.co].length})`:""), d.co)));
+    DEPS.forEach(d=> sel.add(new Option(depName(d.n)+(MUNS[d.co]?` (${MUNS[d.co].length})`:""), d.co)));
   }catch(e){ /* si falla, sigue funcionando solo a nivel nacional */ }
 }
 
@@ -322,6 +322,9 @@ $("refrescar").addEventListener("click",()=>refrescarActivo(true));
 $("autoChk").addEventListener("change",function(){ if(this.checked) autoLeft=autoSeg(); });
 
 const titulo = s => (s||"").toLowerCase().replace(/(^|[\s.\-])(\p{L})/gu,(m,p,l)=>p+l.toUpperCase());
+/* Nombres de departamento que la Registraduría entrega abreviados → forma completa */
+const FIXDEP = {"Norte De San":"Norte de Santander"};
+const depName = raw => { const t=titulo(raw); return FIXDEP[t]||t; };
 
 /* ---------- Fotos de candidatos (Wikimedia Commons) y avatar ---------- */
 const PHOTOS={
@@ -500,7 +503,7 @@ function pintar(j){
 /* ---------- Desglose por sub-ámbito al tocar un candidato ---------- */
 function childrenOf(){
   if(CURRENT.mun) return null;                       // municipio = nivel final
-  if(CURRENT.dep==="00") return DEPS.map(d=>({code:d.co,name:titulo(d.n)}));
+  if(CURRENT.dep==="00") return DEPS.map(d=>({code:d.co,name:depName(d.n)}));
   return (MUNS[CURRENT.dep]||[]).map(m=>({code:m.co,name:titulo(m.n)}));
 }
 async function fetchScope(code){ return getScope(code); }
@@ -582,7 +585,7 @@ async function loadComparison(){
     const va=voteOf(j,A.codcan), vb=voteOf(j,B.codcan);
     const total=parseInt(T.votval||T.votant||"0",10)||0;
     const win=(va.vot===0&&vb.vot===0)?null:(va.vot>=vb.vot?"A":"B");
-    return {co:d.co, name:titulo(d.n), nameNorm:norm(d.n), a:va, b:vb, total, mesas:(T.pmesesc||"0%"), win};
+    return {co:d.co, name:depName(d.n), nameNorm:norm(d.n), a:va, b:vb, total, mesas:(T.pmesesc||"0%"), win};
   });
   if(ROUND!==myRound) return {pending:true};                          // cambió de vuelta: no cachear
   COMP={A,B,depts};
