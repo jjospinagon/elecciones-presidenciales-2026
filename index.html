@@ -141,6 +141,18 @@
   .cmpInfo .mi-r .nm2{flex:1;color:var(--txt)}
   .cmpInfo .mi-w{margin-top:8px}
   .detail .dhead{display:flex;align-items:center;gap:8px}
+  .wgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+  .wcol{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 10px 6px}
+  .wch{display:flex;align-items:center;gap:8px;margin-bottom:8px;border-bottom:1px solid var(--line);padding-bottom:8px}
+  .wcn{font-weight:800;font-size:.92rem;line-height:1.15}
+  .wcc{color:var(--mut);font-size:.7rem;margin-top:2px}
+  .wrow{display:flex;justify-content:space-between;align-items:baseline;gap:6px;padding:5px 0;border-bottom:1px solid #16294f}
+  .wrow:last-child{border-bottom:0}
+  .wrn{font-size:.8rem;font-weight:600}
+  .wrm{text-align:right;font-weight:800;font-size:.8rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .wrm small{display:block;color:var(--mut);font-weight:600;font-size:.66rem}
+  .wempty{color:var(--mut);font-size:.75rem;padding:6px 0}
+  .depttl{font-weight:800;font-size:.82rem;color:var(--mut);margin:2px 0 8px}
   .msg{text-align:center;color:var(--mut);font-size:.85rem;padding:24px 8px}
   .foot{text-align:center;color:var(--mut);font-size:.7rem;margin-top:18px;line-height:1.6}
   .foot a{color:var(--mut)}
@@ -655,9 +667,24 @@ async function buildDep(){
     const comp=await loadComparison();
     if(tok!==RTOKEN) return;                 // cambió de vuelta/pestaña: descartar
     if(comp.pending){ cont.innerHTML='<div class="msg">La 2.ª vuelta ya abrió; esperando los primeros datos oficiales… (se actualiza solo)</div>'; return; }
+    /* --- Paralelo: dónde ganó cada uno y por cuánto --- */
+    const pp1=n=>(n>=0?"+":"−")+Math.abs(n).toLocaleString("es-CO",{minimumFractionDigits:1,maximumFractionDigits:1})+" pp";
+    const winsOf=(self,opp)=>comp.depts
+        .filter(d=>d.win===self)
+        .map(d=>({name:d.name, mpp:(self==="A"?d.a.pc-d.b.pc:d.b.pc-d.a.pc), mv:(self==="A"?d.a.vot-d.b.vot:d.b.vot-d.a.vot)}))
+        .sort((x,y)=>y.mpp-x.mpp);
+    const col=(cand,arr)=>'<div class="wcol"><div class="wch">'+avatar(cand.codcan,cand.nm,cand.color,"sm")+
+        '<div><div class="wcn" style="color:'+cand.color+'">'+cand.nm+'</div>'+
+        '<div class="wcc">Ganó en '+arr.length+' departamento'+(arr.length===1?'':'s')+'</div></div></div>'+
+        (arr.length?arr.map(d=>'<div class="wrow"><span class="wrn">'+d.name+'</span>'+
+          '<span class="wrm" style="color:'+cand.color+'">'+pp1(d.mpp)+'<small>+'+fmt(Math.round(d.mv))+' votos</small></span></div>').join("")
+         :'<div class="wempty">Sin departamentos ganados</div>')+'</div>';
+    const paralelo='<div class="wgrid">'+col(comp.A,winsOf("A","B"))+col(comp.B,winsOf("B","A"))+'</div>'+
+        '<div class="depttl">Detalle por departamento</div>';
+
     const rows=comp.depts.slice().sort((a,b)=>b.total-a.total);
     const maxT=Math.max(1,...rows.map(r=>r.total));
-    cont.innerHTML=rows.map(d=>{
+    cont.innerHTML=paralelo+rows.map(d=>{
       const wpct=(d.total/maxT*100).toFixed(1);
       const aw=d.total?(d.a.vot/d.total*100):0, bw=d.total?(d.b.vot/d.total*100):0;
       const rest=Math.max(0,100-aw-bw);
